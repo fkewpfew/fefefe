@@ -1,0 +1,50 @@
+body {
+    background-color: #87CEEB; /* Azul claro */
+    margin: 0;
+    font-family: Arial, sans-serif;
+    overflow: hidden; /* Evitar desplazamiento */
+}
+
+h1 {
+    color: white;
+}
+
+#gameContainer {
+    position: relative;
+    text-align: center;
+}
+
+#info {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: white;
+}
+
+#controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+button {
+    margin: 5px;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    background-color: #007BFF;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+#adminPanel, #registerPanel {
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px;
+}

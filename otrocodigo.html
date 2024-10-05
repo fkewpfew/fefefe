@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=0.5, user-scalable=no">
+    <title>Juego Simple</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            color: #fff;
+        }
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #gameCanvas {
+            background-color: #333;
+            display: block;
+            margin: auto;
+            width: 100%; /* Ajuste para hacer el canvas más pequeño */
+            height: auto; /* Mantiene la relación de aspecto */
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px; /* Ajustar la posición para pantallas más pequeñas */
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: space-around;
+            width: 80%;
+        }
+        #controls button {
+            background: rgba(255, 255, 255, 0.5);
+            border: none;
+            padding: 15px; /* Aumentar el tamaño del botón */
+            border-radius: 10px; /* Ajustar el borde para un mejor diseño */
+            cursor: pointer;
+            font-size: 20px; /* Aumentar el tamaño del texto */
+            min-width: 50px; /* Asegurar que los botones tengan un ancho mínimo */
+        }
+        #controls button:active {
+            background: rgba(255, 255, 255, 0.8);
+        }
+        #registration {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 15px; /* Ajustar el padding */
+            border-radius: 10px;
+            display: none;
+            z-index: 1000;
+        }
+        #registration input {
+            margin-bottom: 10px;
+            padding: 10px; /* Aumentar el tamaño del input */
+            font-size: 16px; /* Ajustar el tamaño de la fuente */
+        }
+    </style>
+</head>
+<body>
+    <div id="registration">
+        <input type="text" id="playerName" placeholder="Ingresa tu nombre">
+        <button id="registerBtn">Registrar</button>
+        <button id="closeRegistration">Cerrar</button>
+    </div>
+    
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="controls">
+            <button id="moveLeft">⬅️</button>
+            <button id="moveRight">➡️</button>
+            <button id="moveUp">⬆️</button>
+            <button id="moveDown">⬇️</button>
+            <button id="shootBtn">💥</button>
+            <button id="adminButton">Admin</button>
+        </div>
+        <div id="info" style="position: absolute; top: 10px; left: 10px;">
+            <p>Vidas: <span id="lifeCount">3</span></p>
+            <p>Balas: <span id="bulletCount">10</span></p>
+            <p>Monedas: <span id="coinCount">0</span></p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const playerImage = new Image();
+        const enemyImage = new Image();
+        playerImage.src = 'player.png'; // Asegúrate de que esta imagen exista
+        enemyImage.src = 'enemy.png'; // Asegúrate de que esta imagen exista
+
+        const adminUserName = 'root'; // Nombre del usuario administrador
+        let isAdmin = false;
+
+        let player = {
+            name: '',
+            x: canvas.width / 2 - 25,
+            y: canvas.height - 70,
+            width: 50,
+            height: 50,
+            speed: 5,
+            bullets: [],
+            coins: 0,
+            lives: 3,
+            enemiesKilled: 0,
+        };
+
+        let enemies = [];
+        let difficulty = 0;
+        let difficultyTimer;
+        let gameInterval;
+
+        function startGame() {
+            gameInterval = setInterval(updateGame, 1000 / 60);
+            difficultyTimer = setInterval(() => difficulty++, 1000);
+            document.getElementById('registration').style.display = 'none'; // Ocultar el registro
+        }
+
+        function updateGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(playerImage, player.x, player.y, player.width, player.height);
+
+            // Mostrar información de vidas y balas
+            document.getElementById('lifeCount').innerText = player.lives;
+            document.getElementById('bulletCount').innerText = player.bullets.length;
+            document.getElementById('coinCount').innerText = player.coins;
+
+            // Actualizar enemigos
+            enemies.forEach((enemy, index) => {
+                ctx.drawImage(enemyImage, enemy.x, enemy.y, enemy.width, enemy.height);
+                enemy.y += enemy.speed;
+
+                if (enemy.y > canvas.height) {
+                    enemies.splice(index, 1);
+                    player.lives--; // El jugador pierde una vida si un enemigo pasa
+                }
+            });
+
+            // Generar nuevos enemigos
+            if (Math.random() < difficulty / 1000) {
+                enemies.push({
+                    x: Math.random() * (canvas.width - 50),
+                    y: 0,
+                    width: 50,
+                    height: 50,
+                    speed: 1 + difficulty / 100
+                });
+            }
+
+            // Actualizar balas
+            player.bullets.forEach((bullet, index) => {
+                bullet.y -= bullet.speed;
+                ctx.fillStyle = 'red';
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+                if (bullet.y < 0) {
+                    player.bullets.splice(index, 1);
+                }
+
+                enemies.forEach((enemy, enemyIndex) => {
+                    if (bullet.x < enemy.x + enemy.width && bullet.x + bullet.width > enemy.x &&
+                        bullet.y < enemy.y + enemy.height && bullet.y + bullet.height > enemy.y) {
+                        enemies.splice(enemyIndex, 1);
+                        player.bullets.splice(index, 1);
+                        player.coins += 5; // Gana monedas al eliminar un enemigo
+                    }
+                });
+            });
+        }
+
+        function shoot() {
+            if (player.bullets.length < 10) { // Límite de 10 balas
+                player.bullets.push({
+                    x: player.x + player.width / 2 - 5,
+                    y: player.y,
+                    width: 10,
+                    height: 20,
+                    speed: 10
+                });
+            } else {
+                alert('Ya tienes 10 balas, no puedes disparar más!');
+            }
+        }
+
+        // Eventos de movimiento
+        document.getElementById('moveLeft').addEventListener('click', () => {
+            if (player.x > 0) player.x -= player.speed;
+        });
+
+        document.getElementById('moveRight').addEventListener('click', () => {
+            if (player.x < canvas.width - player.width) player.x += player.speed;
+        });
+
+        document.getElementById('moveUp').addEventListener('click', () => {
+            if (player.y > 0) player.y -= player.speed;
+        });
+
+        document.getElementById('moveDown').addEventListener('click', () => {
+            if (player.y < canvas.height - player.height) player.y += player.speed;
+        });
+
+        document.getElementById('shootBtn').addEventListener('click', shoot);
+
+        // Función para registrar al jugador
+        document.getElementById('registerBtn').addEventListener('click', () => {
+            const name = document.getElementById('playerName').value;
+            if (name) {
+                player.name = name;
+
+                // Verificar si el usuario es el administrador
+                if (name === adminUserName) {
+                    isAdmin = true;
+                    alert(`Bienvenido, administrador ${name}!`);
+                } else {
+                    alert(`Bienvenido, ${name}!`);
+                }
+                
+                startGame();
+            }
+        });
+
+        // Cerrar el menú de registro
+        document.getElementById('closeRegistration').addEventListener('click', () => {
+            document.getElementById('registration').style.display = 'none';
+        });
+
+        // Funcionalidad de administrador
+        document.getElementById('adminButton').addEventListener('click', () => {
+            if (isAdmin) {
+                player.coins += 100;
+                player.lives += 3;
+                alert('Recibiste 100 monedas y 3 vidas extra!');
+            } else {
+                alert('No tienes permisos de administrador.');
+            }
+        });
+
+        // Mostrar el menú de registro al cargar la página
+        window.onload = () => {
+            document.getElementById('registration').style.display = 'block';
+        };
+    </script>
+</body>
+</html>

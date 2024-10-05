@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Juego con Armas</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border: 2px solid #fff;
+            touch-action: none; /* Evitar el comportamiento de desplazamiento en móviles */
+            background-color: rgba(0, 0, 0, 0.5); /* Color de fondo del canvas */
+            max-width: 100%; /* Ajustar el canvas a 100% del ancho disponible */
+            height: auto; /* Mantener la relación de aspecto */
+        }
+        #gameContainer {
+            display: none;
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            overflow: hidden; /* Evitar que el contenido se desborde */
+        }
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 80%;
+            max-width: 300px; /* Reducir el ancho máximo de los controles */
+        }
+        .controlButton {
+            background: rgba(255, 255, 255, 0.5);
+            border: none;
+            padding: 8px; /* Ajustar el padding para botones más pequeños */
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px; /* Reducir el tamaño de la fuente */
+            width: 100%;
+            margin: 4px 0; /* Ajustar el margen */
+        }
+        .controlButton:active {
+            background: rgba(255, 255, 255, 0.8);
+        }
+        #topButtons {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        #topButtons button {
+            background: rgba(255, 255, 255, 0.5);
+            border: none;
+            padding: 8px; /* Ajustar el padding para botones más pequeños */
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px; /* Reducir el tamaño de la fuente */
+            margin-bottom: 5px;
+        }
+        #topButtons button:active {
+            background: rgba(255, 255, 255, 0.8);
+        }
+        #difficultyTimer {
+            position: absolute;
+            top: 50px;
+            left: 20px;
+            color: #fff;
+            font-size: 18px; /* Reducir el tamaño de la fuente */
+            z-index: 10;
+        }
+        .bullet {
+            position: absolute;
+            background-color: red;
+            border-radius: 2px;
+            z-index: 5;
+        }
+        .missile {
+            position: absolute;
+            background-color: blue; /* Color del misil */
+            border-radius: 5px;
+            z-index: 5;
+        }
+        .enemy {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+        }
+        #storePanel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%; /* Hacer la tienda más pequeña */
+            max-width: 300px; /* Ajustar el ancho máximo */
+            background: rgba(0, 0, 0, 0.9);
+            padding: 10px; /* Reducir el padding */
+            border-radius: 10px;
+            display: none;
+        }
+        #storePanel h2 {
+            text-align: center;
+            margin-bottom: 10px; /* Ajustar el margen */
+        }
+        #storePanel button {
+            background: rgba(255, 255, 255, 0.5);
+            border: none;
+            padding: 8px; /* Ajustar el padding para botones más pequeños */
+            width: 100%;
+            margin: 4px 0; /* Ajustar el margen */
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #storePanel button:active {
+            background: rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div id="startPanel">
+        <h1>Bienvenido al Juego</h1>
+        <input type="text" id="registerName" placeholder="Nombre" />
+        <input type="text" id="registerLastName" placeholder="Apellido" />
+        <select id="userRole">
+            <option value="user">Usuario</option>
+            <option value="admin">Administrador</option>
+        </select>
+        <button id="registerBtn">Registrar</button>
+    </div>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div>
+            <div id="userTag"></div>
+            <div id="adminTag" style="display: none;">(Admin)</div>
+            <div id="coins"></div>
+            <div id="potions"></div>
+            <div id="lives"></div>
+            <div id="enemiesKilled"></div>
+        </div>
+        <div id="controls">
+            <button id="shootBtn" class="controlButton">Disparar</button>
+            <button id="launchMissileBtn" class="controlButton">Lanzar Misil</button> <!-- Botón de lanzar misil -->
+            <button id="superPowerBtn" class="controlButton">Superpoder</button> <!-- Botón de superpoder -->
+            <div style="display: flex; justify-content: space-between; width: 100%;">
+                <button id="leftBtn" class="controlButton">←</button>
+                <button id="rightBtn" class="controlButton">→</button>
+            </div>
+        </div>
+        <div id="topButtons">
+            <button id="pauseBtn">Pausar</button>
+            <button id="resetBtn">Reiniciar</button>
+            <button id="fullscreenBtn">Pantalla Completa</button>
+            <button id="storeBtn">Tienda</button> <!-- Botón de la Tienda -->
+            <button id="logoutBtn">Cerrar Sesión</button>
+        </div>
+        <div id="adminPanel">
+            <h2>Panel de Administración</h2>
+            <button id="viewStatsBtn">Ver Estadísticas</button>
+            <button id="manageUsersBtn">Gestionar Usuarios</button>
+            <button id="closeAdminPanelBtn">Cerrar Panel</button>
+        </div>
+        <div id="storePanel">
+            <h2>Tienda</h2>
+            <button id="buyPistolBtn">Comprar Pistola (50 Monedas)</button>
+            <button id="buyRifleBtn">Comprar Rifle (100 Monedas)</button>
+            <button id="buyRocketLauncherBtn">Comprar Lanzacohetes (200 Monedas)</button>
+            <button id="closeStoreBtn">Cerrar Tienda</button>
+        </div>
+        <div id="difficultyTimer">Dificultad: 0s</div>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const playerImage = new Image();
+        const enemyImage = new Image();
+        playerImage.src = 'player.png'; // Imagen del jugador
+        enemyImage.src = 'enemy.png'; // Imagen del enemigo
+
+        let player = {
+            x: canvas.width / 2,
+            y: canvas.height - 70,
+            width: 50,
+            height: 50,
+            speed: 5,
+            bullets: [],
+            missiles: [], // Array para almacenar misiles
+            coins: 0,
+            potions: 0,
+            lives: 6,
+            enemiesKilled: 0,
+            name: '',
+            lastName: '',
+            role: 'user',
+            weapon: 'Pistol', // Arma inicial
+            weapons: {
+                Pistol: { damage: 10, speed: 5, cost: 50 },
+                Rifle: { damage: 20, speed: 10, cost: 100 },
+                RocketLauncher: { damage: 50, speed: 2, cost: 200 }
+            },
+            isInvincible: false, // Estado de invencibilidad
+        };
+
+        let enemies = [];
+        let difficulty = 0;
+        let difficultyTimer;
+        let gameInterval;
+
+        function startGame() {
+            document.getElementById('startPanel').style.display = 'none';
+            document.getElementById('gameContainer').style.display = 'block';
+            player.name = document.getElementById('registerName').value;
+            player.lastName = document.getElementById('registerLastName').value;
+            player.role = document.getElementById('userRole').value;
+            document.getElementById('userTag').innerText = `Usuario: ${player.name}`;
+            if (player.role === 'admin') {
+                document.getElementById('adminTag').style.display = 'block';
+            }
+            gameInterval = setInterval(updateGame, 1000 / 60);
+            spawnEnemies();
+            startDifficultyTimer();
+        }
+
+        function spawnEnemies() {
+            setInterval(() => {
+                const enemy = {
+                    x: Math.random() * (canvas.width - 50),
+                    y: -50,
+                    width: 50,
+                    height: 50,
+                    speed: Math.random() * 2 + 1 // Velocidad aleatoria para enemigos
+                };
+                enemies.push(enemy);
+            }, 1000);
+        }
+
+        function updateGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawPlayer();
+            drawEnemies();
+            updateBullets();
+            updateMissiles(); // Actualizar los misiles
+            drawCoins();
+            drawPotions();
+            drawLives();
+            drawEnemiesKilled();
+            checkCollisions();
+        }
+
+        function drawPlayer() {
+            ctx.drawImage(playerImage, player.x, player.y, player.width, player.height);
+        }
+
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                enemy.y += enemy.speed; // Movimiento de enemigos
+                ctx.drawImage(enemyImage, enemy.x, enemy.y, enemy.width, enemy.height);
+            });
+        }
+
+        function updateBullets() {
+            player.bullets.forEach(bullet => {
+                bullet.y -= bullet.speed;
+                ctx.fillStyle = 'red';
+                ctx.fillRect(bullet.x, bullet.y, 5, 10);
+            });
+            player.bullets = player.bullets.filter(bullet => bullet.y > 0); // Filtrar balas que salieron del canvas
+        }
+
+        function updateMissiles() {
+            player.missiles.forEach(missile => {
+                missile.y -= missile.speed; // Actualizar posición del misil
+                ctx.fillStyle = 'blue'; // Color del misil
+                ctx.fillRect(missile.x, missile.y, 10, 20); // Dibujar misil
+            });
+            player.missiles = player.missiles.filter(missile => missile.y > 0); // Filtrar misiles que salieron del canvas
+        }
+
+        function drawCoins() {
+            document.getElementById('coins').innerText = `Monedas: ${player.coins}`;
+        }
+
+        function drawPotions() {
+            document.getElementById('potions').innerText = `Pociones: ${player.potions}`;
+        }
+
+        function drawLives() {
+            document.getElementById('lives').innerText = `Vidas: ${player.lives}`;
+        }
+
+        function drawEnemiesKilled() {
+            document.getElementById('enemiesKilled').innerText = `Enemigos Eliminados: ${player.enemiesKilled}`;
+        }
+
+        function checkCollisions() {
+            enemies.forEach((enemy, index) => {
+                if (enemy.y + enemy.height > player.y && enemy.y < player.y + player.height &&
+                    enemy.x + enemy.width > player.x && enemy.x < player.x + player.width) {
+                    player.lives--;
+                    enemies.splice(index, 1);
+                    if (player.lives <= 0) {
+                        endGame();
+                    }
+                }
+                player.bullets.forEach((bullet, bulletIndex) => {
+                    if (bullet.y <= enemy.y + enemy.height && bullet.y >= enemy.y &&
+                        bullet.x + 5 >= enemy.x && bullet.x <= enemy.x + enemy.width) {
+                        player.enemiesKilled++;
+                        player.coins += 10; // Ganar monedas por enemigo eliminado
+                        enemies.splice(index, 1);
+                        player.bullets.splice(bulletIndex, 1); // Eliminar la bala que impactó
+                    }
+                });
+            });
+        }
+
+        function endGame() {
+            clearInterval(gameInterval);
+            alert('¡Juego terminado!'); // Mensaje de fin de juego
+            document.getElementById('gameContainer').style.display = 'none';
+            document.getElementById('startPanel').style.display = 'block';
+        }
+
+        function startDifficultyTimer() {
+            difficultyTimer = setInterval(() => {
+                difficulty++;
+                document.getElementById('difficultyTimer').innerText = `Dificultad: ${difficulty}s`;
+                if (difficulty % 10 === 0) { // Aumentar la dificultad cada 10 segundos
+                    increaseDifficulty();
+                }
+            }, 1000);
+        }
+
+        function increaseDifficulty() {
+            // Aquí puedes añadir lógica para aumentar la dificultad, como aumentar la velocidad de los enemigos
+            enemies.forEach(enemy => {
+                enemy.speed += 0.5; // Aumentar velocidad de enemigos
+            });
+        }
+
+        document.getElementById('registerBtn').addEventListener('click', startGame);
+        document.getElementById('shootBtn').addEventListener('click', () => {
+            player.bullets.push({ x: player.x + player.width / 2 - 2.5, y: player.y, speed: 5 });
+        });
+        document.getElementById('launchMissileBtn').addEventListener('click', () => {
+            player.missiles.push({ x: player.x + player.width / 2 - 5, y: player.y, speed: 10 }); // Lanzar misil
+        });
+        document.getElementById('leftBtn').addEventListener('click', () => {
+            if (player.x > 0) {
+                player.x -= player.speed;
+            }
+        });
+        document.getElementById('rightBtn').addEventListener('click', () => {
+            if (player.x < canvas.width - player.width) {
+                player.x += player.speed;
+            }
+        });
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            clearInterval(gameInterval);
+        });
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            location.reload(); // Reiniciar juego
+        });
+        document.getElementById('fullscreenBtn').addEventListener('click', () => {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                document.documentElement.requestFullscreen();
+            }
+        });
+        document.getElementById('storeBtn').addEventListener('click', () => {
+            document.getElementById('storePanel').style.display = 'block';
+        });
+        document.getElementById('closeStoreBtn').addEventListener('click', () => {
+            document.getElementById('storePanel').style.display = 'none';
+        });
+        document.getElementById('buyPistolBtn').addEventListener('click', () => {
+            if (player.coins >= player.weapons.Pistol.cost) {
+                player.coins -= player.weapons.Pistol.cost;
+                player.weapon = 'Pistol'; // Cambiar a la pistola
+            }
+        });
+        document.getElementById('buyRifleBtn').addEventListener('click', () => {
+            if (player.coins >= player.weapons.Rifle.cost) {
+                player.coins -= player.weapons.Rifle.cost;
+                player.weapon = 'Rifle'; // Cambiar al rifle
+            }
+        });
+        document.getElementById('buyRocketLauncherBtn').addEventListener('click', () => {
+            if (player.coins >= player.weapons.RocketLauncher.cost) {
+                player.coins -= player.weapons.RocketLauncher.cost;
+                player.weapon = 'RocketLauncher'; // Cambiar al lanzacohetes
+            }
+        });
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            alert('Sesión cerrada.'); // Mensaje de cierre de sesión
+            location.reload(); // Reiniciar juego
+        });
+    </script>
+</body>
+</html>

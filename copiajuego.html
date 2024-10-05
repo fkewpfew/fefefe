@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Juego de Matar Enemigos</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border: 2px solid #fff;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        #gameContainer {
+            display: none;
+            position: relative;
+            width: 80%;
+            height: 80vh;
+            background: rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+            margin: auto;
+        }
+        #topButtons {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        #topButtons button {
+            background: rgba(255, 255, 255, 0.5);
+            border: none;
+            padding: 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        #topButtons button:active {
+            background: rgba(255, 255, 255, 0.8);
+        }
+        #shop {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 5px;
+            display: none; /* Initially hidden */
+        }
+        #shop button {
+            background: rgba(255, 255, 255, 0.5);
+            border: none;
+            padding: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        @media (max-width: 600px) {
+            canvas {
+                width: 100%;
+                height: auto;
+            }
+            #gameContainer {
+                width: 100%;
+                height: 100vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="startPanel">
+        <h1>Bienvenido al Juego</h1>
+        <input type="text" id="registerName" placeholder="Nombre" />
+        <input type="text" id="registerLastName" placeholder="Apellido" />
+        <select id="userRole">
+            <option value="user">Usuario</option>
+            <option value="admin">Administrador</option>
+        </select>
+        <button id="registerBtn">Registrar</button>
+    </div>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="topButtons">
+            <button id="logoutBtn">Cerrar Sesión</button>
+            <button id="adminBtn" style="display: none;">Panel Admin</button>
+            <button id="shopToggleBtn">Abrir Tienda</button> <!-- Button to toggle shop -->
+        </div>
+        <div id="shop">
+            <h3>Tienda</h3>
+            <button id="buyDamageBtn">Comprar Aumento de Daño (10 monedas)</button>
+            <button id="buySpeedBtn">Comprar Aumento de Velocidad (15 monedas)</button>
+            <h3>Farming</h3>
+            <button id="plantCropBtn">Plantar Cultivo (5 monedas)</button>
+            <button id="harvestCropBtn">Cosechar Cultivo</button>
+            <p>Monedas: <span id="coinCount">0</span></p>
+            <p>XP: <span id="xpCount">0</span></p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let enemies = [];
+        let enemiesKilled = 0;
+        let totalEnemiesSpawned = 0;
+        let coins = 0;
+        let xp = 0;
+        let damage = 1;
+        let speed = 1;
+        let enemySpawnInterval;
+
+        // Cargar imagen de enemigo
+        const enemyImage = new Image();
+        enemyImage.src = 'enemy.png';
+
+        function spawnEnemy() {
+            const enemy = {
+                x: Math.random() * (canvas.width - 50),
+                y: Math.random() * (canvas.height - 50),
+                width: 50,
+                height: 50,
+            };
+            enemies.push(enemy);
+            totalEnemiesSpawned++;
+            if (totalEnemiesSpawned % 10 === 0) { // Spawn boss every 10 enemies
+                spawnBoss();
+            }
+        }
+
+        function spawnBoss() {
+            const boss = {
+                x: Math.random() * (canvas.width - 100),
+                y: Math.random() * (canvas.height - 100),
+                width: 100,
+                height: 100,
+                health: 10 // Example boss health
+            };
+            enemies.push(boss);
+        }
+
+        function drawEnemies() {
+            for (let enemy of enemies) {
+                ctx.drawImage(enemyImage, enemy.x, enemy.y, enemy.width, enemy.height);
+            }
+        }
+
+        function drawStats() {
+            ctx.fillStyle = 'white';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Enemigos Eliminados: ${enemiesKilled}`, 10, 20);
+            ctx.fillText(`Total Enemigos: ${totalEnemiesSpawned}`, 10, 40);
+            ctx.fillText(`Monedas: ${coins}`, 10, 60);
+            ctx.fillText(`XP: ${xp}`, 10, 80);
+        }
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawEnemies();
+            drawStats();
+            requestAnimationFrame(drawGame);
+        }
+
+        canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                if (
+                    mouseX >= enemy.x &&
+                    mouseX <= enemy.x + enemy.width &&
+                    mouseY >= enemy.y &&
+                    mouseY <= enemy.y + enemy.height
+                ) {
+                    enemies.splice(i, 1);
+                    enemiesKilled += damage; 
+                    xp += 5; // Incrementar XP
+                    coins += 5; 
+                    document.getElementById('coinCount').textContent = coins;
+                    document.getElementById('xpCount').textContent = xp; // Actualizar contador de XP
+                    break;
+                }
+            }
+        });
+
+        document.getElementById('plantCropBtn').addEventListener('click', () => {
+            if (coins >= 5) {
+                coins -= 5; // Reducir monedas
+                document.getElementById('coinCount').textContent = coins; // Actualizar contador
+                // Aquí podrías agregar lógica para añadir cultivos a una lista
+            } else {
+                alert('No tienes suficientes monedas!');
+            }
+        });
+
+        document.getElementById('harvestCropBtn').addEventListener('click', () => {
+            // Aquí podrías agregar lógica para cosechar cultivos y ganar monedas
+            coins += 10; // Ejemplo de recompensa
+            document.getElementById('coinCount').textContent = coins; // Actualizar contador
+        });
+
+        document.getElementById('registerBtn').addEventListener('click', () => {
+            const isAdmin = document.getElementById('userRole').value === 'admin';
+            if (isAdmin) {
+                document.getElementById('adminBtn').style.display = 'block';
+            } else {
+                document.getElementById('adminBtn').style.display = 'none';
+            }
+            document.getElementById('startPanel').style.display = 'none';
+            document.getElementById('gameContainer').style.display = 'block';
+            drawGame(); 
+
+            enemySpawnInterval = setInterval(spawnEnemy, 2000);
+        });
+
+        document.getElementById('adminBtn').addEventListener('click', () => {
+            window.location.href = 'admin.html'; 
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            document.getElementById('startPanel').style.display = 'block';
+            document.getElementById('gameContainer').style.display = 'none';
+            enemies = []; 
+            enemiesKilled = 0; 
+            totalEnemiesSpawned = 0; 
+            coins = 0; 
+            xp = 0; // Reiniciar XP
+            document.getElementById('coinCount').textContent = coins; 
+            document.getElementById('xpCount').textContent = xp; // Reiniciar contador de XP
+            clearInterval(enemySpawnInterval); 
+        });
+
+        // Toggle shop visibility
+        document.getElementById('shopToggleBtn').addEventListener('click', () => {
+            const shop = document.getElementById('shop');
+            if (shop.style.display === 'none' || shop.style.display === '') {
+                shop.style.display = 'block';
+                document.getElementById('shopToggleBtn').textContent = 'Cerrar Tienda'; // Change button text
+            } else {
+                shop.style.display = 'none';
+                document.getElementById('shopToggleBtn').textContent = 'Abrir Tienda'; // Change button text
+            }
+        });
+
+    </script>
+</body>
+</html>
